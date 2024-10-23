@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from supabase import Client, create_client
-
+from pydantic import BaseModel
 
 # Cargar variables de entorno desde el archivo .env
 load_dotenv()
@@ -27,6 +27,35 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Modelos de Pydantic para validación de datos
+class Mascota(BaseModel):
+    nombre_mascota: str
+    especie: str
+    raza: str
+    fecha_nacimiento: str
+    id_dueño: int
+
+class Cliente(BaseModel):
+    nombre_usuario: str
+    correo: str
+    contraseña: str
+
+class Cita(BaseModel):
+    id_mascota: int
+    fecha_cita: str
+    id_veterinario: int
+    hora_cita: str
+
+class Diagnostico(BaseModel):
+    id_evaluacion: int
+    diagnostico: str
+    tratamiento: str
+
+class Funcionario(BaseModel):
+    nombre: str
+    puesto: str
+    correo: str
+    contraseña: str
 
 # Función para cifrar la contraseña
 def hash_password(plain_password: str) -> str:
@@ -38,102 +67,119 @@ def hash_password(plain_password: str) -> str:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
 
-@app.get("/")
-def read_root():
-    return {"status": "Corriendo como vaca lechera"}
-
-
-
 # Ruta GET para verificar la conexión a la base de datos
 @app.get("/check-table/")
 async def check_db(tabla: str):
     try:
-        # Realizar una consulta simple para obtener todos los registros de la tabla 'Citas'
         response = supabase.table(tabla).select("*").execute()
-        print(response)
-
         return {"message": "Connected to the database", "data": response.data}
-    
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
 
-# Ruta de ejemplo que inserta un registro en Supabase
-@app.post("/add-pet/")
-async def add_item(name: str, especie: str, raza: str, fecha_nacimiento: str, id_dueño: str):
+# Endpoints CRUD completos
+
+# Crear una mascota
+@app.post("/mascotas/")
+async def create_mascota(mascota: Mascota):
     try:
-        data = {
-            "nombre_mascota": name,
-            "especie": especie,
-            "raza": raza,
-            "fecha_nacimiento": fecha_nacimiento,
-            "id_dueño": id_dueño
-        }
-        # Inserta el nuevo registro en la tabla 'items'
-        response = supabase.table("Mascotas").insert(data).execute()
-
-        # Verificar el estado de la respuesta
-        print(response)
-
-        return {"message": "Item added successfully", "data": response.data}
+        response = supabase.table("Mascotas").insert(mascota.dict()).execute()
+        return {"message": "Mascota creada", "data": response.data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
 
-# Ruta post para Clientes
-@app.post("/add-client/")
-async def add_client(nombre: str, correo: str, contraseña: str):
+# Obtener todas las mascotas
+@app.get("/mascotas/")
+async def get_mascotas():
     try:
-        # Cifrar la contraseña antes de almacenarla
-        hashed_password = hash_password(contraseña)
-        
-        data = {
-            "nombre_usuario": nombre,
-            "correo": correo,
-            "contraseña": hashed_password  # Almacenar el hash en lugar de la contraseña en texto plano
-        }
-
-        # Inserta el nuevo registro en la tabla 'Clientes'
-        response = supabase.table("Clientes").insert(data).execute()
-
-        return {"message": "Client added successfully", "data": response.data}
+        response = supabase.table("Mascotas").select("*").execute()
+        return {"data": response.data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
 
-# Ruta post para Citas
-@app.post("/add-appointment/")
-async def add_appointment(id_mascota: str, fecha_cita: str, id_veterinario: str, hora_cita: str):
+# Actualizar información de una mascota
+@app.put("/mascotas/{id}")
+async def update_mascota(id: int, mascota: Mascota):
     try:
-        data = {
-            "id_mascota": id_mascota,
-            "fecha_cita": fecha_cita,
-            "id_veterinario": id_veterinario,
-            "hora_cita": hora_cita
-        }
-
-        # Inserta el nuevo registro en la tabla 'Citas'
-        response = supabase.table("Citas").insert(data).execute()
-
-        return {"message": "Appointment added successfully", "data": response.data}
+        response = supabase.table("Mascotas").update(mascota.dict()).eq('id', id).execute()
+        return {"message": "Mascota actualizada", "data": response.data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
 
+# Eliminar una mascota
+@app.delete("/mascotas/{id}")
+async def delete_mascota(id: int):
+    try:
+        response = supabase.table("Mascotas").delete().eq('id', id).execute()
+        return {"message": "Mascota eliminada"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-# Ruta para verificar la contraseña de un cliente (ejemplo)
+# Agregar cliente
+@app.post("/clientes/")
+async def create_cliente(cliente: Cliente):
+    try:
+        hashed_password = hash_password(cliente.contraseña)
+        cliente_data = cliente.dict()
+        cliente_data["contraseña"] = hashed_password
+        response = supabase.table("Clientes").insert(cliente_data).execute()
+        return {"message": "Cliente creado", "data": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Crear una cita
+@app.post("/citas/")
+async def create_cita(cita: Cita):
+    try:
+        response = supabase.table("Citas").insert(cita.dict()).execute()
+        return {"message": "Cita creada", "data": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Obtener todas las citas
+@app.get("/citas/")
+async def get_citas():
+    try:
+        response = supabase.table("Citas").select("*").execute()
+        return {"data": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Agregar diagnóstico
+@app.post("/diagnosticos/")
+async def create_diagnostico(diagnostico: Diagnostico):
+    try:
+        response = supabase.table("Diagnosticos").insert(diagnostico.dict()).execute()
+        return {"message": "Diagnóstico creado", "data": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Crear funcionario
+@app.post("/funcionarios/")
+async def create_funcionario(funcionario: Funcionario):
+    try:
+        hashed_password = hash_password(funcionario.contraseña)
+        funcionario_data = funcionario.dict()
+        funcionario_data["contraseña"] = hashed_password
+        response = supabase.table("Funcionario").insert(funcionario_data).execute()
+        return {"message": "Funcionario creado", "data": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Ruta para verificar la contraseña de un cliente
 @app.post("/verify-client/")
 async def verify_client(correo: str, contraseña: str):
     try:
-        # Supongamos que obtienes el cliente desde la base de datos (sólo un ejemplo)
+        # Buscar el cliente por correo en la base de datos
         response = supabase.table("Clientes").select("*").eq("correo", correo).execute()
+
+        # Verificar si el cliente existe
         if len(response.data) == 0:
             raise HTTPException(status_code=404, detail="Cliente no encontrado")
 
-        cliente = response.data[0]
-        hashed_password = cliente["contraseña"]
+        cliente = response.data[0]  # Obtener los datos del cliente
+        hashed_password = cliente["contraseña"]  # La contraseña cifrada almacenada en la base de datos
 
-        # Verificar la contraseña
+        # Verificar si la contraseña es correcta
         if verify_password(contraseña, hashed_password):
             return {"message": "Contraseña correcta"}
         else:
