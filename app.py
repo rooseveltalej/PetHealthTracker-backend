@@ -1,10 +1,14 @@
 import bcrypt
 import os
+import jwt
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from supabase import Client, create_client
+from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # Cargar variables de entorno desde el archivo .env
 load_dotenv()
@@ -12,6 +16,8 @@ load_dotenv()
 # Obtener las variables de entorno
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+SECRET_KEY = os.getenv("SECRET_KEY")  # Clave secreta para JWT
+ALGORITHM = "HS256"  # Algoritmo para firmar el token JWT
 
 # Crear el cliente de Supabase
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -27,6 +33,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# OAuth2PasswordBearer será usado para proteger rutas con tokens JWT
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
 # Modelos de Pydantic para validación de datos
 class Mascota(BaseModel):
     nombre_mascota: str
@@ -39,6 +48,11 @@ class Cliente(BaseModel):
     nombre_usuario: str
     correo: str
     contraseña: str
+
+    class Config:
+        fields = {
+            'nombre_usuario': 'nombre_usuario'
+        }
 
 class Cita(BaseModel):
     id_mascota: int
@@ -53,9 +67,19 @@ class Diagnostico(BaseModel):
 
 class Funcionario(BaseModel):
     nombre: str
-    puesto: str
+    puesto: str = Field(..., min_length=1, description="El puesto es obligatorio") #TODO: HACER VALIDACIONES PARA TODOS LOS CAMPOS
     correo: str
     contraseña: str
+
+    class Config:
+        fields = {
+            'nombre': 'nombre',
+        }
+
+class LoginRequest(BaseModel):
+    correo: str
+    contraseña: str
+    role: str  # Indicar si es cliente o funcionario
 
 # Función para cifrar la contraseña
 def hash_password(plain_password: str) -> str:
@@ -67,7 +91,28 @@ def hash_password(plain_password: str) -> str:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
 
-# Ruta GET para verificar la conexión a la base de datos
+# Función para generar un JWT
+def create_access_token(data: dict, expires_delta: timedelta = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=30)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+# Función para verificar el token JWT
+def verify_token(token: str = Depends(oauth2_scheme)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expirado")
+    except jwt.JWTError:
+        raise HTTPException(status_code=401, detail="Token inválido")
+
+# Ruta para verificar la conexión a la base de datos
 @app.get("/check-table/")
 async def check_db(tabla: str):
     try:
@@ -75,7 +120,7 @@ async def check_db(tabla: str):
         return {"message": "Connected to the database", "data": response.data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
+    
 # Endpoints CRUD completos
 
 # Crear una mascota
@@ -187,3 +232,25 @@ async def verify_client(correo: str, contraseña: str):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+# Ruta para iniciar sesión unificada
+@app.post("/login/")
+async def login_user(login_data: LoginRequest):
+    table = "Clientes" if login_data.role == "cliente" else "Funcionario"
+    
+    response = supabase.table(table).select("*").eq("correo", login_data.correo).execute()
+    if not response.data:
+        raise HTTPException(status_code=400, detail="Correo o contraseña incorrectos")
+    
+    user = response.data[0]
+    if not bcrypt.checkpw(login_data.contraseña.encode('utf-8'), user["contraseña"].encode('utf-8')):
+        raise HTTPException(status_code=400, detail="Correo o contraseña incorrectos")
+    
+    # Generar token JWT
+    token = create_access_token(data={"sub": user["correo"]}, expires_delta=timedelta(minutes=30))
+    return {"access_token": token, "token_type": "bearer"}
+
+# Ejemplo de una ruta protegida
+@app.get("/protected/")
+async def protected_route(token: str = Depends(verify_token)):
+    return {"message": "Acceso permitido", "email": token["sub"]}

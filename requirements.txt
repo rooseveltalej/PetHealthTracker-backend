@@ -3,3 +3,5 @@ uvicorn==0.22.0
 supabase
 bcrypt
 python-dotenv
+PyJWT
+pydantic
