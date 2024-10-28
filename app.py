@@ -254,3 +254,12 @@ async def login_user(login_data: LoginRequest):
 @app.get("/protected/")
 async def protected_route(token: str = Depends(verify_token)):
     return {"message": "Acceso permitido", "email": token["sub"]}
+
+
+@app.get("/citas-veterinario/{id}")
+async def get_citas_veterinario(id: int):
+    try:
+        response = supabase.table("Historial").select("*").eq("veterinario_id", id).execute()
+        return {"data": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
