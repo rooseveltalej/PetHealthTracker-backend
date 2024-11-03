@@ -53,7 +53,7 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
 def verify_token(token: str = Depends(oauth2_scheme)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload
+        return payload  # Devuelve el payload completo, incluyendo el rol
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expirado")
     except jwt.JWTError:
@@ -95,6 +95,16 @@ async def get_citas_veterinario(id: int):
 @app.get("/protected/")
 async def protected_route(token: str = Depends(verify_token)):
     return {"message": "Acceso permitido", "email": token["sub"]}
+
+@app.get("/reportes/")
+async def get_reportes(token: dict = Depends(verify_token)):
+    # Verifica que el rol del usuario sea 'admin' o 'assistant'
+    if token.get("role") not in ['Administrador', 'Recepcionista']:
+        raise HTTPException(status_code=403, detail="No tienes permiso para acceder a esta ruta")
+    
+    # Lógica para retornar los reportes
+    return {"message": "Acceso a reportes permitido"}
+
 
 # --- POST Methods ---
 @app.post("/mascotas/")
@@ -154,8 +164,9 @@ async def login_user(login_data: LoginRequest):
     if not verify_password(login_data.contraseña, user["contraseña"]):
         raise HTTPException(status_code=400, detail="Correo o contraseña incorrectos")
 
-    # Generar token JWT
-    token = create_access_token(data={"sub": user["correo"]}, expires_delta=timedelta(minutes=30))
+    # Generar token JWT con el rol del usuario
+    print(user["puesto"])
+    token = create_access_token(data={"sub": user["correo"], "role": user["puesto"]}, expires_delta=timedelta(minutes=30))
     return {"access_token": token, "token_type": "bearer"}
 
 @app.post("/verify-client/")
