@@ -169,7 +169,7 @@ async def login_user(login_data: LoginRequest):
     if table == "Clientes":
         token = create_access_token(data={"sub": user["correo"], "role": "cliente", "nombre": user["nombre_usuario"], "client_id": user["id"]}, expires_delta=timedelta(minutes=30))
         return {"access_token": token, "token_type": "bearer"}
-    token = create_access_token(data={"sub": user["correo"], "role": user["puesto"], "nombre": user["nombre"], "client_id": user["id"]}, expires_delta=timedelta(minutes=30))
+    token = create_access_token(data={"sub": user["correo"], "role": user["puesto"], "nombre": user["nombre"], "id": user["id"]}, expires_delta=timedelta(minutes=30))
     return {"access_token": token, "token_type": "bearer"}
 
 @app.post("/verify-client/")
