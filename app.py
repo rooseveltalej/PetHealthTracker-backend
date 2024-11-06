@@ -165,8 +165,11 @@ async def login_user(login_data: LoginRequest):
         raise HTTPException(status_code=400, detail="Correo o contraseña incorrectos")
 
     # Generar token JWT con el rol del usuario
-    print(user["puesto"])
-    token = create_access_token(data={"sub": user["correo"], "role": user["puesto"]}, expires_delta=timedelta(minutes=30))
+    print(user)
+    if table == "Clientes":
+        token = create_access_token(data={"sub": user["correo"], "role": "cliente", "nombre": user["nombre_usuario"], "client_id": user["id"]}, expires_delta=timedelta(minutes=30))
+        return {"access_token": token, "token_type": "bearer"}
+    token = create_access_token(data={"sub": user["correo"], "role": user["puesto"], "nombre": user["nombre"], "client_id": user["id"]}, expires_delta=timedelta(minutes=30))
     return {"access_token": token, "token_type": "bearer"}
 
 @app.post("/verify-client/")
@@ -191,23 +194,7 @@ async def verify_client(correo: str, contraseña: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-# Ruta para iniciar sesión unificada
-@app.post("/login/")
-async def login_user(login_data: LoginRequest):
-    table = "Clientes" if login_data.role == "cliente" else "Funcionario"
-    
-    response = supabase.table(table).select("*").eq("correo", login_data.correo).execute()
-    if not response.data:
-        raise HTTPException(status_code=400, detail="Correo o contraseña incorrectos")
-    
-    user = response.data[0]
-    if not bcrypt.checkpw(login_data.contraseña.encode('utf-8'), user["contraseña"].encode('utf-8')):
-        raise HTTPException(status_code=400, detail="Correo o contraseña incorrectos")
-    
-    # Generar token JWT
-    token = create_access_token(data={"sub": user["correo"]}, expires_delta=timedelta(minutes=30))
-    return {"access_token": token, "token_type": "bearer"}
-
+#
 # Ejemplo de una ruta protegida
 @app.get("/protected/")
 async def protected_route(token: str = Depends(verify_token)):
