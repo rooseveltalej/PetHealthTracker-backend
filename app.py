@@ -237,18 +237,19 @@ async def verify_client(correo: str, contraseña: str):
 @app.post("/login/")
 async def login_user(login_data: LoginRequest):
     table = "Clientes" if login_data.role == "cliente" else "Funcionario"
-    
+    print(login_data)
     response = supabase.table(table).select("*").eq("correo", login_data.correo).execute()
     if not response.data:
         raise HTTPException(status_code=400, detail="Correo o contraseña incorrectos")
     
     user = response.data[0]
+    print(user)
     if not bcrypt.checkpw(login_data.contraseña.encode('utf-8'), user["contraseña"].encode('utf-8')):
         raise HTTPException(status_code=400, detail="Correo o contraseña incorrectos")
     
     # Generar token JWT
     token = create_access_token(data={"sub": user["correo"]}, expires_delta=timedelta(minutes=30))
-    return {"access_token": token, "token_type": "bearer"}
+    return {"access_token": token, "token_type": "bearer", "id": user["id"], "nombre": user["nombre_usuario"]}
 
 # Ejemplo de una ruta protegida
 @app.get("/protected/")
