@@ -199,3 +199,12 @@ async def verify_client(correo: str, contraseña: str):
 @app.get("/protected/")
 async def protected_route(token: str = Depends(verify_token)):
     return {"message": "Acceso permitido", "email": token["sub"]}
+
+
+@app.put("/mascotas/{id}/editar")
+async def update_mascota(id: int, mascota: Mascota):
+    try:
+        response = supabase.table("Mascotas").update(mascota.dict()).eq("id", id).execute()
+        return {"message": "Mascota actualizada", "data": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
