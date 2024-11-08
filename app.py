@@ -75,6 +75,15 @@ async def get_mascotas():
         return {"data": response.data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@app.get("/citas/{id}")
+async def get_citas_mascota(id: int):
+    try:
+        response = supabase.table("Citas").select("*").eq("id_mascota", id).execute()
+        print(response.data)
+        return {"data": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/citas/")
 async def get_citas():
