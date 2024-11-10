@@ -146,11 +146,21 @@ async def cancelar_cita(id_cita: int):
         print(f"Error al intentar cancelar la cita: {e}")
         raise HTTPException(status_code=500, detail="Ocurrió un error al cancelar la cita.")
 
-#Método para obtener la lista de vacunas_mascotas asociadas a un id_mascota desde los clientes
 @app.get("/vacunas_mascotas/{id_mascota}")
 async def get_vacunas_mascotas(id_mascota: int):
     try:
-        response = supabase.table("VacunasMascotas").select("*").eq("id_mascota", id_mascota).execute()    
+        response = supabase.from_("VacunasMascotas").select("*").filter("mascota", "eq", id_mascota).execute()
+        print(response.data)
+        return response.data
+    except Exception as e:
+        print("Data error")
+        print("Exception:", e)
+        raise HTTPException(status_code=500, detail=str(e))
+        
+@app.get("/vacunas/{id_vacuna}")
+async def get_vacunas(id_vacuna: int):
+    try:
+        response = supabase.table("Vacunas").select("*").eq("id", id_vacuna).execute()
         return {"data": response.data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
