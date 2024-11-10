@@ -20,7 +20,7 @@ class Cita(BaseModel):
     fecha_cita: str
     id_veterinario: int
     hora_cita: str
-
+    
 class Diagnostico(BaseModel):
     id_evaluacion: int
     diagnostico: str

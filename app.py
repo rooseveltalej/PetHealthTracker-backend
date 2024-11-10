@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from supabase import Client, create_client
 from models import Mascota, Cliente, Cita, Diagnostico, Funcionario, LoginRequest
+from datetime import date  # Opcional: si prefieres validar que sea una fecha
 
 # Cargar variables de entorno desde el archivo .env
 load_dotenv()
@@ -85,6 +86,7 @@ async def get_citas_mascota(id: int):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.get("/citas/")
 async def get_citas():
     try:
@@ -113,6 +115,56 @@ async def get_reportes(token: dict = Depends(verify_token)):
     
     # Lógica para retornar los reportes
     return {"message": "Acceso a reportes permitido"}
+
+@app.get("/citas/{id_cita}/fecha")
+async def get_citas_fecha(id_cita: int):
+    print(id_cita)
+    try:
+        response = supabase.table("Citas").select("*").eq("id", id_cita).execute()
+        print(response.data)
+        return {"data": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+@app.delete("/citas/{id_cita}/cancelar")
+async def cancelar_cita(id_cita: int):
+    try:
+        # Intentamos eliminar la cita con el id especificado
+        response = supabase.table("Citas").delete().eq("id", id_cita).execute()
+        
+        # Verificamos si la operación fue exitosa
+        if not response.data:  # Esto indica que no se encontró la cita
+            raise HTTPException(status_code=404, detail="Cita no encontrada o no pudo ser cancelada")
+        
+        # Si todo salió bien, enviamos una respuesta de éxito
+        return {"message": "Cita cancelada exitosamente", "data": response.data}
+        
+    except Exception as e:
+        # Captura y muestra el error para identificar el problema exacto
+        print(f"Error al intentar cancelar la cita: {e}")
+        raise HTTPException(status_code=500, detail="Ocurrió un error al cancelar la cita.")
+
+#Método para obtener la lista de vacunas_mascotas asociadas a un id_mascota desde los clientes
+@app.get("/vacunas_mascotas/{id_mascota}")
+async def get_vacunas_mascotas(id_mascota: int):
+    try:
+        response = supabase.table("VacunasMascotas").select("*").eq("id_mascota", id_mascota).execute()    
+        return {"data": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+
+
+#Método para obtener los resultados de un diagnóstico relacionado a un cliente 
+@app.get("/historial/cliente/{id_mascota}")
+async def get_historial(id_mascota: int):
+    try:
+        response = supabase.table("Historial").select("*").eq("id_mascota", id_mascota).execute()
+        return {"data": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # --- POST Methods ---
@@ -180,6 +232,7 @@ async def login_user(login_data: LoginRequest):
         return {"access_token": token, "token_type": "bearer"}
     token = create_access_token(data={"sub": user["correo"], "role": user["puesto"], "nombre": user["nombre"], "id": user["id"]}, expires_delta=timedelta(minutes=30))
     return {"access_token": token, "token_type": "bearer"}
+
 
 @app.post("/verify-client/")
 async def verify_client(correo: str, contraseña: str):
