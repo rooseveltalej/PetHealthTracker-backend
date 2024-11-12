@@ -81,6 +81,7 @@ async def get_mascotas():
 async def get_citas_mascota(id: int):
     try:
         response = supabase.table("Citas").select("*").eq("id_mascota", id).execute()
+        print("DATA")
         print(response.data)
         return {"data": response.data}
     except Exception as e:
@@ -99,6 +100,14 @@ async def get_citas():
 async def get_citas_veterinario(id: int):
     try:
         response = supabase.table("Historial").select("*").eq("veterinario_id", id).execute()
+        return {"data": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/veterinarios")
+async def get_veterinarios():
+    try:
+        response = supabase.table("Funcionario").select("*").eq("puesto", "Veterinario").execute()
         return {"data": response.data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -175,6 +184,22 @@ async def get_historial(id_mascota: int):
         return {"data": response.data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/veterinarios/{id_veterinario}")
+async def get_veterinarios(id_veterinario: int):
+    try:
+        query = (
+            supabase.table("Funcionario")
+            .select("*")
+            .eq("puesto", "Veterinario")
+            .eq("id", id_veterinario)
+            .execute()
+        )
+        return {"data": query.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 
 
 # --- POST Methods ---
