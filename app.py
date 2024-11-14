@@ -64,8 +64,13 @@ def verify_token(token: str = Depends(oauth2_scheme)):
 @app.get("/check-table/")
 async def check_db(tabla: str):
     try:
-        response = supabase.table(tabla).select("*").execute()
-        return {"message": "Conectado a la base de datos", "data": response.data}
+        # si la tabla es clientes no debe de regresar la contraseña
+        if tabla == "Clientes":
+            response = supabase.table(tabla).select("id, nombre_usuario, correo").execute()
+            return {"message": "Conectado a la base de datos", "data": response.data}
+        else:
+            response = supabase.table(tabla).select("*").execute()
+            return {"message": "Conectado a la base de datos", "data": response.data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
