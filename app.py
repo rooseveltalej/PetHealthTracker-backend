@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException, Depends, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from supabase import Client, create_client
-from models import Mascota, Cliente, Cita, Diagnostico, Funcionario, LoginRequest
+from models import Mascota, Cliente, Cita, Diagnostico, Funcionario, LoginRequest, CompleteCitaData
 from datetime import date  # Opcional: si prefieres validar que sea una fecha
 
 # Cargar variables de entorno desde el archivo .env
@@ -324,6 +324,44 @@ async def verify_client(correo: str, contraseña: str):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/citas/{id_cita}/completar")
+async def completar_cita(id_cita: int, data: CompleteCitaData):
+    try:
+        # Obtenenemos la cita
+        cita_response = supabase.table("Citas").select("*").eq("id", id_cita).execute()
+        
+        if not cita_response.data:
+            raise HTTPException(status_code=404, detail="Cita no encontrada")
+
+        cita = cita_response.data[0]
+
+        # Preparar datos para insertar en Historial usando los datos proporcionados
+        historial_data = {
+            "id_mascota": cita["id_mascota"],
+            "fecha": cita["fecha_cita"],
+            "tipo": data.tipo,
+            "descripcion": data.motivo,
+            "veterinario_id": cita["id_veterinario"],
+            "resultado": data.resultado
+        }
+
+        # Insertar la cita en el historial
+        historial_response = supabase.table("Historial").insert(historial_data).execute()
+        
+        if not historial_response.data:
+            raise HTTPException(status_code=500, detail="No se pudo registrar la cita en el historial")
+
+        # Eliminar la cita de la tabla de citas
+        delete_response = supabase.table("Citas").delete().eq("id", id_cita).execute()
+        
+        if not delete_response.data:
+            raise HTTPException(status_code=500, detail="No se pudo eliminar la cita de la tabla de citas")
+
+        return {"message": "Cita completada y movida al historial exitosamente"}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ocurrió un error: {str(e)}")
     
 #
 # Ejemplo de una ruta protegida

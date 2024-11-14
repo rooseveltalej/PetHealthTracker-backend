@@ -39,3 +39,8 @@ class LoginRequest(BaseModel):
     correo: str
     contraseña: str
     role: str  # Indicar si es cliente o funcionario
+
+class CompleteCitaData(BaseModel):
+    tipo: str
+    motivo: str
+    resultado: str
