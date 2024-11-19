@@ -3,7 +3,6 @@ from datetime import datetime
 from typing import Optional
 
 class Mascota(BaseModel):
-    id: Optional[int]
     nombre_mascota: str
     especie: str
     raza: str
@@ -12,10 +11,12 @@ class Mascota(BaseModel):
     image_url: Optional[str]
 
 class Cliente(BaseModel):
-    id: Optional[int]
     nombre_usuario: str
     correo: str
     contraseña: str
+
+    class Config:
+        fields = {'nombre_usuario': 'nombre_usuario'}
 
 class Cita(BaseModel):
     id_mascota: int
