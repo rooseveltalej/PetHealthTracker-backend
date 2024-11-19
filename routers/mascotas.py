@@ -43,3 +43,13 @@ async def get_mascotas_by_dueno(dueno_id: int):
         return {"data": response.data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.get("/{id}", dependencies=[Depends(verify_token)])
+async def get_mascota(id: int):
+    try:
+        response = supabase.table("Mascotas").select("*").eq("id", id).execute()
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Mascota no encontrada")
+        return {"data": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
