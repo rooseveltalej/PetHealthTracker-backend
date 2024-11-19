@@ -9,9 +9,10 @@ async def get_dashboard_data():
     try:
         # Total de citas programadas, realizadas y pendientes
         citas = supabase.table("Citas").select("*").execute().data
+        revisadas = supabase.table("Historial").select("*").execute().data
         total_citas = len(citas)
-        citas_realizadas = len([c for c in citas if c.get("estado") == "realizada"])
-        citas_pendientes = total_citas - citas_realizadas
+        total_revisadas = len(revisadas)
+        citas_pendientes = total_revisadas - total_citas
 
         # Total de clientes y funcionarios
         total_clientes = len(supabase.table("Clientes").select("*").execute().data)
@@ -32,7 +33,7 @@ async def get_dashboard_data():
         return {
             "appointment_stats": {
                 "scheduled": total_citas,
-                "completed": citas_realizadas,
+                "completed": total_revisadas,
                 "pending": citas_pendientes,
             },
             "active_users": {
