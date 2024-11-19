@@ -4,11 +4,11 @@ from typing import Optional
 
 class Mascota(BaseModel):
     id: Optional[int]
-    nombre: str
-    edad: int
+    nombre_mascota: str
     especie: str
     raza: str
-    cliente_id: int
+    fecha_nacimiento: str
+    id_dueño: int
     image_url: Optional[str]
 
 class Cliente(BaseModel):
