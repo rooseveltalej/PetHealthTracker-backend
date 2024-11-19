@@ -37,3 +37,11 @@ async def completar_cita(id_cita: int, data: CompleteCitaData):
         return {"message": "Cita completada y movida al historial exitosamente"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.get("/historial/{id_mascota}", dependencies=[Depends(verify_token)])
+async def get_historial_mascota(id_mascota: int):
+    try:
+        response = supabase.table("Historial").select("*").eq("id_mascota", id_mascota).execute()
+        return {"data": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -18,11 +18,10 @@ class Cliente(BaseModel):
     contraseña: str
 
 class Cita(BaseModel):
-    id: Optional[int]
     id_mascota: int
-    fecha_cita: datetime
-    motivo: str
+    fecha_cita: str
     id_veterinario: int
+    hora_cita: str
 
 class Diagnostico(BaseModel):
     id: Optional[int]
