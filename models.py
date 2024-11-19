@@ -1,34 +1,30 @@
 from pydantic import BaseModel, Field
-from datetime import datetime
-from typing import Optional
 
 class Mascota(BaseModel):
-    id: Optional[int]
     nombre_mascota: str
     especie: str
     raza: str
     fecha_nacimiento: str
     id_dueño: int
-    image_url: Optional[str]
 
 class Cliente(BaseModel):
-    id: Optional[int]
     nombre_usuario: str
     correo: str
     contraseña: str
 
-class Cita(BaseModel):
-    id: Optional[int]
-    id_mascota: int
-    fecha_cita: datetime
-    motivo: str
-    id_veterinario: int
+    class Config:
+        fields = {'nombre_usuario': 'nombre_usuario'}
 
+class Cita(BaseModel):
+    id_mascota: int
+    fecha_cita: str
+    id_veterinario: int
+    hora_cita: str
+    
 class Diagnostico(BaseModel):
-    id: Optional[int]
-    id_cita: int
-    descripcion: str
-    resultado: str
+    id_evaluacion: int
+    diagnostico: str
+    tratamiento: str
 
 class Funcionario(BaseModel):
     nombre: str
@@ -42,7 +38,7 @@ class Funcionario(BaseModel):
 class LoginRequest(BaseModel):
     correo: str
     contraseña: str
-    role: str  # Puede ser 'cliente' o 'funcionario'
+    role: str  # Indicar si es cliente o funcionario
 
 class CompleteCitaData(BaseModel):
     tipo: str

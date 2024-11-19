@@ -13,9 +13,10 @@ async def get_funcionarios():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/", dependencies=[Depends(verify_token)])
+@router.post("/")
 async def create_funcionario(funcionario: Funcionario):
     try:
+        
         hashed_password = hash_password(funcionario.contraseña)
         funcionario_data = funcionario.dict()
         funcionario_data["contraseña"] = hashed_password
