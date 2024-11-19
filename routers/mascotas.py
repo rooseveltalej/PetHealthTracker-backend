@@ -28,3 +28,18 @@ async def update_mascota(id: int, mascota: Mascota):
         return {"message": "Mascota actualizada", "data": response.data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/dueno/{dueno_id}", dependencies=[Depends(verify_token)])
+async def get_mascotas_by_dueno(dueno_id: int):
+    """
+    Obtiene las mascotas asociadas a un dueño específico.
+    :param dueno_id: ID del dueño.
+    :return: Lista de mascotas asociadas al dueño.
+    """
+    try:
+        response = supabase.table("Mascotas").select("*").eq("id_dueño", dueno_id).execute()
+        if not response.data:
+            raise HTTPException(status_code=404, detail="No se encontraron mascotas para este dueño.")
+        return {"data": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
