@@ -20,6 +20,16 @@ async def get_citas_mascota(id: int):
         return {"data": response.data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+#Esta ruta no obtiene la cita por medio de la fecha de la cita, sino por el id, el nombre es para evitar conflictos con el frontend.
+#Por ende, esta función obtiene la cita por medio del id de la cita.
+@router.get("/{id}/fecha", dependencies=[Depends(verify_token)])
+async def get_citas_fecha(id: int):
+    try:
+        response = supabase.table("Citas").select("*").eq("id", id).execute()
+        return {"data": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
     
 @router.get("/veterinario/{id}", dependencies=[Depends(verify_token)])
 async def get_citas_veterinario(id: int):
