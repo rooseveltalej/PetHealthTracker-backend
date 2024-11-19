@@ -47,3 +47,7 @@ class CompleteCitaData(BaseModel):
     tipo: str
     motivo: str
     resultado: str
+
+class AssociatePetVaccineRequest(BaseModel):
+    mascota_id: int
+    vacuna_id: int
